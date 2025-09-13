@@ -1,5 +1,7 @@
 const path = require('path');
+const fs = require('fs');
 const vscode = require('vscode');
+const Handlebars = require('handlebars');
 
 async function getCurrentEditorGitStatus() {
 
@@ -28,6 +30,7 @@ async function getCurrentEditorGitStatus() {
 	console.log({ branch, status, branchDetails, commit, lastMergeCommit, needsSync: lastMergeCommit !== commit });
 
 	return {
+		file: uri,
 		root: repo.rootUri.fsPath,
 		repoName: path.basename(repo.rootUri.fsPath),
 		HEAD: repo.state.HEAD ? repo.state.HEAD.name || repo.state.HEAD.commit : null,
@@ -40,33 +43,33 @@ async function getCurrentEditorGitStatus() {
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
+	const templatePath = context.asAbsolutePath(path.join('templates', 'default.hbs'));
+	const templateSrc = fs.readFileSync(templatePath, 'utf-8');
+	const template = Handlebars.compile(templateSrc, { noEscape: true });
 
 	let myStatusBarItem;
 	const myCommandId = 'starpost-select';
 	context.subscriptions.push(vscode.commands.registerCommand(myCommandId, async () => {
-		const selectedText = vscode.window.activeTextEditor.document.getText(vscode.window.activeTextEditor.selection);
-
-		let modifiedString;
+		const selection = vscode.window.activeTextEditor.selection;
+		const selectedText = vscode.window.activeTextEditor.document.getText(selection);
 
 		const gitData = await getCurrentEditorGitStatus();
-		if (gitData) {
-			modifiedString = `
-📦 ${gitData.repoName} — 🌿 ${gitData.HEAD} - @ 3a7f2b9 (✅ clean)
-📄 src/utils/math.rs (L120–123)
-\`\`\`js
-${selectedText}
-\`\`\`
-			`
-		} else {
-			modifiedString = `
-\`\`\`
-${selectedText}
-\`\`\`
-			`
+		const data = {
+			repo: gitData.repoName,
+			branch: gitData.HEAD,
+			commit: gitData.HEAD,
+			status: `${gitData.ahead}, ${gitData.behind}`,
+			file: gitData.file,
+			start: selection.start.line,
+			end: selection.end.line,
+			language: "js",
+			code: selectedText
 		}
 
-		await vscode.env.clipboard.writeText(modifiedString);
-		vscode.window.showInformationMessage(`Copied selection!\n\n${modifiedString}`);
+		const fancyStr = template(data);
+
+		await vscode.env.clipboard.writeText(fancyStr);
+		vscode.window.showInformationMessage(`Copied selection!`);
 	}));
 	myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 1000);
 	myStatusBarItem.command = myCommandId;
