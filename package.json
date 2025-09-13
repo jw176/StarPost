@@ -9,14 +9,13 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "*"
+  ],
+  "extensionDependencies": [
+    "vscode.git"
+  ],
   "main": "./extension.js",
-  "contributes": {
-    "commands": [{
-      "command": "starpost.helloWorld",
-      "title": "Hello World"
-    }]
-  },
   "scripts": {
     "lint": "eslint .",
     "pretest": "npm run lint",

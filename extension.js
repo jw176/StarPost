@@ -1,36 +1,107 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
+const path = require('path');
 const vscode = require('vscode');
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+async function getCurrentEditorGitStatus() {
+
+	const gitExtension = vscode.extensions.getExtension('vscode.git').exports;
+	const api = gitExtension.getAPI(1);
+
+	
+	const editor = vscode.window.activeTextEditor;
+	if (!editor) return null;
+	const uri = editor.document.uri;
+	const repo = api.repositories.find(r => uri.fsPath.startsWith(r.rootUri.fsPath));
+	const head = repo.state.HEAD;
+
+	// Get the branch and commit 
+	const { commit, name: branch } = head;
+
+	// Get head of any other branch
+	const mainBranch = 'master'
+	const branchDetails = await repo.getBranch(mainBranch);
+
+	// Get last merge commit
+	const lastMergeCommit = await repo.getMergeBase(branch, mainBranch);
+
+	const status = await repo.status();
+
+	console.log({ branch, status, branchDetails, commit, lastMergeCommit, needsSync: lastMergeCommit !== commit });
+
+	return {
+		root: repo.rootUri.fsPath,
+		repoName: path.basename(repo.rootUri.fsPath),
+		HEAD: repo.state.HEAD ? repo.state.HEAD.name || repo.state.HEAD.commit : null,
+		ahead: branchDetails.ahead,
+		behind: branchDetails.behind
+	};
+}
 
 /**
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "starpost" is now active!');
+	let myStatusBarItem;
+	const myCommandId = 'starpost-select';
+	context.subscriptions.push(vscode.commands.registerCommand(myCommandId, async () => {
+		const selectedText = vscode.window.activeTextEditor.document.getText(vscode.window.activeTextEditor.selection);
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with  registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('starpost.helloWorld', function () {
-		// The code you place here will be executed every time your command is executed
+		let modifiedString;
 
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from Starpost!');
-	});
+		const gitData = await getCurrentEditorGitStatus();
+		if (gitData) {
+			modifiedString = `
+📦 ${gitData.repoName} — 🌿 ${gitData.HEAD} - @ 3a7f2b9 (✅ clean)
+📄 src/utils/math.rs (L120–123)
+\`\`\`js
+${selectedText}
+\`\`\`
+			`
+		} else {
+			modifiedString = `
+\`\`\`
+${selectedText}
+\`\`\`
+			`
+		}
 
-	context.subscriptions.push(disposable);
+		await vscode.env.clipboard.writeText(modifiedString);
+		vscode.window.showInformationMessage(`Copied selection!\n\n${modifiedString}`);
+	}));
+	myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 1000);
+	myStatusBarItem.command = myCommandId;
+	context.subscriptions.push(myStatusBarItem);
+
+	context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(updateStatusBarItem));
+	context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(updateStatusBarItem));
+
+	function updateStatusBarItem() {
+		const n = getNumberOfSelectedLines(vscode.window.activeTextEditor);
+		if (n > 0) {
+			myStatusBarItem.text = `$(star-half) StarPost - ${n} line(s) selected $(globe)`;
+			myStatusBarItem.show();
+		} else {
+			myStatusBarItem.hide();
+		}
+	}
+
+	function getNumberOfSelectedLines(editor) {
+		let lines = 0;
+		if (editor) {
+			lines = editor.selections.reduce((prev, curr) => prev + (curr.end.line - curr.start.line), 0);
+		}
+		return lines;
+	}
+
+	updateStatusBarItem();
+
 }
 
-// This method is called when your extension is deactivated
-function deactivate() {}
+
+function deactivate() { }
 
 module.exports = {
 	activate,
 	deactivate
 }
+
