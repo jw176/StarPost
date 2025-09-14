@@ -3,8 +3,7 @@ const fs = require('fs');
 const vscode = require('vscode');
 const Handlebars = require('handlebars');
 
-async function getSelectionContextData() {
-
+async function getTargetContextData() {
 	const gitExtension = vscode.extensions.getExtension('vscode.git').exports;
 	const api = gitExtension.getAPI(1);
 
@@ -41,48 +40,51 @@ async function getSelectionContextData() {
 	}
 }
 
+class Template {
+	constructor(templatePath) {
+		this.templatePath = templatePath;
+		const templateSrc = fs.readFileSync(templatePath, 'utf-8');
+		this.template = Handlebars.compile(templateSrc, { noEscape: true });
+	}
+	generate(data) {
+		return this.template(data);
+	}
+}
+
+
 /**
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
-	const templatePath = context.asAbsolutePath(path.join('templates', 'default.hbs'));
-	const templateSrc = fs.readFileSync(templatePath, 'utf-8');
-	const template = Handlebars.compile(templateSrc, { noEscape: true });
+	const gitTemplate = new Template(context.asAbsolutePath(path.join('templates', 'defaults', 'gitEnabled.hbs')));
+	const fallbackTemplate = new Template(context.asAbsolutePath(path.join('templates', 'defaults', 'fallback.hbs')))
 
-	const myCommandId = 'starpost-select';
-	context.subscriptions.push(vscode.commands.registerCommand(myCommandId, async () => {
-		const data = await getSelectionContextData();
-		const fancyStr = template(data);
-		await vscode.env.clipboard.writeText(fancyStr);
-		vscode.window.showInformationMessage(`Copied selection!`);
-	}));
-
+	const myCommandId = 'starpost-copy-selection';
+	
 	let myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 1000);
 	myStatusBarItem.command = myCommandId;
 	context.subscriptions.push(myStatusBarItem);
 	context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(updateStatusBarItem));
 	context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(updateStatusBarItem));
-
+	
 	function updateStatusBarItem() {
-		const n = getNumberOfSelectedLines(vscode.window.activeTextEditor);
-		if (n > 0) {
-			myStatusBarItem.text = `$(star-half) StarPost - ${n} line(s) selected $(globe)`;
+		if (vscode.window.activeTextEditor.selection) {
+			myStatusBarItem.text = `$(star-half) StarPost - Copy selection`;
 			myStatusBarItem.show();
 		} else {
 			myStatusBarItem.hide();
 		}
 	}
-
-	function getNumberOfSelectedLines(editor) {
-		let lines = 0;
-		if (editor) {
-			lines = editor.selections.reduce((prev, curr) => prev + (curr.end.line - curr.start.line), 0);
-		}
-		return lines;
-	}
+	
+	context.subscriptions.push(vscode.commands.registerCommand(myCommandId, async () => {
+		const data = await getTargetContextData();
+		const fancyStr = gitTemplate.generate(data);
+		await vscode.env.clipboard.writeText(fancyStr);
+		myStatusBarItem.text = `$(star-half) StarPost - Copied $(check-all)`;
+		setTimeout(() => myStatusBarItem.text = `$(star-half) StarPost - Copy selection`, 1500)
+	}));
 
 	updateStatusBarItem();
-
 }
 
 
