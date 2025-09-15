@@ -68,7 +68,8 @@ function activate(context) {
 	context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(updateStatusBarItem));
 	
 	function updateStatusBarItem() {
-		if (vscode.window.activeTextEditor.selection) {
+		const selection = vscode.window.activeTextEditor.selection;
+		if (selection && !selection.isEmpty) {
 			myStatusBarItem.text = `$(star-half) StarPost - Copy selection`;
 			myStatusBarItem.show();
 		} else {
