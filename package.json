@@ -4,6 +4,7 @@
   "description": "",
   "version": "0.0.1",
   "publisher": "jw176",
+  "icon": "assets/logo128.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/jw176/StarPost.git"
