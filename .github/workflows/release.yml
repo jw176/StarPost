@@ -1,0 +1,58 @@
+name: Build and Release Extension
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers when a tag starting with 'v' (e.g., v1.0.0) is pushed
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Step 4: Package the extension
+      - name: Package VS Code Extension
+        run: npx vsce package
+
+      - name: Resolve VSIX Filename
+        id: resolve_vsix
+        run: echo "VSIX_FILE=$(ls *.vsix)" >> $GITHUB_ENV
+
+      # Step 6: Create a GitHub Release
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: ${{ github.ref_name }}
+          body: |
+            Release of the extension version ${{ github.ref_name }}.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 7: Upload VSIX to the release
+      - name: Upload VSIX
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.VSIX_FILE }}
+          asset_name: ${{ env.VSIX_FILE }}
+          asset_content_type: application/octet-stream
