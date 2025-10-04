@@ -1,7 +1,7 @@
 {
   "name": "starpost",
   "displayName": "Starpost",
-  "description": "",
+  "description": "Copy code with git metadata (repo, branch, commit, file, lines) wrapped in a Markdown code block for easy sharing.",
   "version": "0.1.0",
   "publisher": "jw176",
   "icon": "assets/logo128.png",
@@ -9,10 +9,28 @@
     "type": "git",
     "url": "https://github.com/jw176/StarPost.git"
   },
+  "homepage": "https://github.com/jw176/StarPost",
   "engines": {
     "vscode": "^1.103.0"
   },
+  "keywords": [
+    "copy",
+    "clipboard",
+    "markdown",
+    "code-snippet",
+    "git",
+    "repo",
+    "branch",
+    "commit",
+    "file",
+    "line-numbers",
+    "share",
+    "archive",
+    "developer-tools",
+    "productivity"
+  ],
   "categories": [
+    "Snippets",
     "Other"
   ],
   "activationEvents": [
