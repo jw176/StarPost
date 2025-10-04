@@ -2,7 +2,7 @@
   "name": "starpost",
   "displayName": "Starpost",
   "description": "Copy code with git metadata (repo, branch, commit, file, lines) wrapped in a Markdown code block for easy sharing.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "jw176",
   "icon": "assets/logo128.png",
   "repository": {
