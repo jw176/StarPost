@@ -1,13 +1,13 @@
-const path = require('path');
-const fs = require('fs');
-const vscode = require('vscode');
-const Handlebars = require('handlebars');
+import { relative, basename, join } from 'path';
+import { readFileSync } from 'fs';
+import { window, extensions, StatusBarAlignment, commands, env } from 'vscode';
+import Handlebars from 'handlebars';
 
 
 async function getTargetContextData() {
-	const selection = vscode.window.activeTextEditor.selection;
-	const selectedText = vscode.window.activeTextEditor.document.getText(selection);
-	const editor = vscode.window.activeTextEditor;
+	const selection = window.activeTextEditor.selection;
+	const selectedText = window.activeTextEditor.document.getText(selection);
+	const editor = window.activeTextEditor;
 	const uri = editor.document.uri;
 	let data = {
 		file: uri.fsPath,
@@ -18,7 +18,7 @@ async function getTargetContextData() {
 	};
 	let containsGitData = false;
 	try {
-		const gitExtension = vscode.extensions.getExtension('vscode.git').exports;
+		const gitExtension = extensions.getExtension('vscode.git').exports;
 		const api = gitExtension.getAPI(1);
 		const repo = api.repositories.find(r => uri.fsPath.startsWith(r.rootUri.fsPath));
 		const currentBranch = repo.state.HEAD.name
@@ -29,8 +29,8 @@ async function getTargetContextData() {
 		const untrackedCount = changes.filter(c => c.status === 7).length;
 
 		const gitData = {
-			file: path.relative(repo.rootUri.fsPath, uri.fsPath),
-			repo: path.basename(repo.rootUri.fsPath),
+			file: relative(repo.rootUri.fsPath, uri.fsPath),
+			repo: basename(repo.rootUri.fsPath),
 			branch: repo.state.HEAD.name,
 			commit: repo.state.HEAD.commit.slice(0, 7),
 			status: `${branchDetails.ahead}, ${branchDetails.behind}`,
@@ -51,7 +51,7 @@ async function getTargetContextData() {
 class Template {
 	constructor(templatePath) {
 		this.templatePath = templatePath;
-		const templateSrc = fs.readFileSync(templatePath, 'utf-8');
+		const templateSrc = readFileSync(templatePath, 'utf-8');
 		this.template = Handlebars.compile(templateSrc, { noEscape: true });
 	}
 	generate(data) {
@@ -63,20 +63,20 @@ class Template {
 /**
  * @param {vscode.ExtensionContext} context
  */
-function activate(context) {
-	const gitTemplate = new Template(context.asAbsolutePath(path.join('templates', 'defaults', 'gitEnabled.hbs')));
-	const fallbackTemplate = new Template(context.asAbsolutePath(path.join('templates', 'defaults', 'fallback.hbs')))
+export function activate(context) {
+	const gitTemplate = new Template(context.asAbsolutePath(join('templates', 'defaults', 'gitEnabled.hbs')));
+	const fallbackTemplate = new Template(context.asAbsolutePath(join('templates', 'defaults', 'fallback.hbs')))
 
 	const myCommandId = 'starpost-copy-selection';
 
-	let myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 1000);
+	let myStatusBarItem = window.createStatusBarItem(StatusBarAlignment.Right, 1000);
 	myStatusBarItem.command = myCommandId;
 	context.subscriptions.push(myStatusBarItem);
-	context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(updateStatusBarItem));
-	context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection(updateStatusBarItem));
+	context.subscriptions.push(window.onDidChangeActiveTextEditor(updateStatusBarItem));
+	context.subscriptions.push(window.onDidChangeTextEditorSelection(updateStatusBarItem));
 
 	function updateStatusBarItem() {
-		const selection = vscode.window.activeTextEditor.selection;
+		const selection = window.activeTextEditor.selection;
 		if (selection && !selection.isEmpty) {
 			myStatusBarItem.text = `$(star-half) StarPost - Copy selection`;
 			myStatusBarItem.show();
@@ -85,11 +85,11 @@ function activate(context) {
 		}
 	}
 
-	context.subscriptions.push(vscode.commands.registerCommand(myCommandId, async () => {
+	context.subscriptions.push(commands.registerCommand(myCommandId, async () => {
 		const { data, useFallback } = await getTargetContextData();
 		const template = useFallback ? fallbackTemplate : gitTemplate;
 		const fancyStr = template.generate(data);
-		await vscode.env.clipboard.writeText(fancyStr);
+		await env.clipboard.writeText(fancyStr);
 		myStatusBarItem.text = `$(star-half) StarPost - Copied $(check-all)`;
 		setTimeout(() => myStatusBarItem.text = `$(star-half) StarPost - Copy selection`, 1500)
 	}));
@@ -98,10 +98,5 @@ function activate(context) {
 }
 
 
-function deactivate() { }
-
-module.exports = {
-	activate,
-	deactivate
-}
+export function deactivate() { }
 
