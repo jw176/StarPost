@@ -29,9 +29,3 @@ Adds the following contextual information into the clipboard:
 ## Contributing
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-## Release Notes
-
-### 1.0.0
-
-Initial release of StarPost

@@ -6,4 +6,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
-- Initial release
+
+## [0.2.0] - 2025-10-04
+
+### Added
+
+- Copy selection feature
