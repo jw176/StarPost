@@ -6,6 +6,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+### Changed
+
+- Reduced extension size by using rollup bundler
+
 
 ## [0.2.0] - 2025-10-04
 
