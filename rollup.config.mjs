@@ -8,12 +8,6 @@ export default {
         {
             file: 'dist/bundle.js',
             format: 'esm',
-            sourcemap: true
-        },
-        {
-            file: 'dist/bundle.min.js',
-            format: 'iife',
-            name: 'version',
             plugins: [terser()],
             sourcemap: true
         }
